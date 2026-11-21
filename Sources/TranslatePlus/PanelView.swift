@@ -29,6 +29,7 @@ struct PanelView: View {
                 .focused($inputFocused)
                 .frame(height: 138)
             controls
+            if model.needsAccess { accessNotice }
             if let engine = model.unavailable { unavailableNotice(engine) }
             editor(text: $model.output, placeholder: resultPlaceholder)
                 .frame(maxHeight: .infinity)
@@ -136,6 +137,23 @@ struct PanelView: View {
         }
     }
 
+    /// Shown after the shortcut, while the app is not allowed to read the selection.
+    private var accessNotice: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "hand.raised").foregroundStyle(.secondary)
+            Text("To pick up the text you selected, Translate That needs the Accessibility permission. Until then, copy the text first (⌘C), then press the shortcut.")
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
+            Button("Allow…") { FrontApp.requestTrust() }
+            Button { model.needsAccess = false } label: { Image(systemName: "xmark") }
+                .buttonStyle(.borderless)
+                .help("Dismiss")
+        }
+        .padding(10)
+        .background(Color.orange.opacity(0.16), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
     /// Shown after choosing an engine that is not switched on yet.
     private func unavailableNotice(_ engine: Engine) -> some View {
         HStack(spacing: 8) {
@@ -205,6 +223,8 @@ struct SettingsView: View {
                 Button("Done") { model.showingSettings = false }.keyboardShortcut(.defaultAction)
             }
 
+            ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
             section {
                 HStack {
                     Text("Open Translate That")
@@ -219,6 +239,9 @@ struct SettingsView: View {
                 } else {
                     caption("Works in any app. With text selected, it is translated straight away.")
                 }
+                Divider()
+                switchRow("Translate copied text", isOn: $model.useClipboard)
+                caption("When nothing is selected, text you copied since the window was last open is used.")
                 Divider()
                 switchRow("Launch at login", isOn: Binding(get: { model.launchAtLogin },
                                                            set: { model.launchAtLogin = $0 }))
@@ -250,8 +273,11 @@ struct SettingsView: View {
                              found: model.codexFound, isOn: $model.codexEnabled)
             }
 
-            Spacer(minLength: 0)
             caption("Google Translate receives the text while you type. Nothing is stored on this Mac except these settings.")
+            }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
             caption("Translate That \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "") · homeapplabs.com")
         }
         .toggleStyle(.switch)

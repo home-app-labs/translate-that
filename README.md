@@ -8,7 +8,8 @@ Press ⌃⌘T in any app and a small window opens with the text you had selected
 
 ## What it does
 
-- **One shortcut, any app.** ⌃⌘T opens the window in the middle of the screen, on top of whatever you are doing. Selected text is picked up and translated straight away. You choose the shortcut in Settings.
+- **One shortcut, any app.** ⌃⌘T opens the window in the middle of the screen, on top of whatever you are doing. Selected text is picked up and translated straight away. No need to open a translator in the browser. You choose the shortcut in Settings.
+- **Or copy first.** If nothing is selected, or the app may not read the selection yet, text you copied just before is translated instead.
 - **In the menu bar and in the Dock.** A click on either icon opens the same window. The Dock icon can be switched off in Settings, leaving only the menu bar.
 - **Translates as you type.** Google Translate answers while you write and shows the language it detected.
 - **Any direction.** The source language is detected, or you choose it. One button swaps the two languages and translates the result back.
@@ -41,6 +42,7 @@ With an assistant switched on:
 The gear in the window, or a right-click on the menu bar icon.
 
 - **Shortcut.** Click the shortcut and press the keys you want. If another app already holds them, the old shortcut stays.
+- **Translate copied text.** On at first. When nothing is selected, text copied since the window was last open is used. Text that password managers mark as secret is never taken.
 - **Launch at login.**
 - **Show in Dock.** On at first. Switch it off to keep only the menu bar icon.
 - **AI assistants.** Shows whether Claude Code and Codex were found on this Mac, with a switch for each and the Claude model.
@@ -55,7 +57,7 @@ Translation needs a service, so this is the one Home App Labs app that uses the 
 | Claude, only when switched on | Anthropic, through the Claude Code program on your Mac |
 | ChatGPT, only when switched on | OpenAI, through the Codex program on your Mac |
 
-Google receives the text while you type, and the text selected when you press the shortcut. Do not use the app for text that must not reach Google, or switch an assistant on and select it before pasting.
+Google receives the text while you type, and the text selected or just copied when you open the window. Do not use the app for text that must not reach Google, or switch an assistant on and select it before pasting.
 
 Nothing is written to disk except your settings.
 
@@ -93,8 +95,8 @@ Prefer to move the app yourself? Take `Translate-That.zip` from the [latest rele
 
 ## Permissions
 
-- **Accessibility** lets the app read the text you selected when you press ⌃⌘T, and paste the result when you choose Insert. Allow it from the menu bar menu. Without it the window opens empty and Insert only copies.
-- Some apps do not share their selection through Accessibility. Copy the text and paste it into the window instead.
+- **Accessibility** lets the app read the text you selected when you press ⌃⌘T, and paste the result when you choose Insert. Allow it from the notice in the window or from the menu bar menu. Without it, copy the text first (⌘C) and then press the shortcut; Insert only copies.
+- Some apps do not share their selection. For those, Translate That presses ⌘C in that app for you and takes the copied text, so the selection also ends up on your clipboard.
 - **⌃⌘T** may already be taken by another app. Settings and the menu say so when that happens; pick another shortcut there.
 
 ## Build from source

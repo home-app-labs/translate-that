@@ -26,13 +26,57 @@ enum FrontApp {
         return text
     }
 
-    static func sendPaste() {
+    static func sendPaste() { press(9) }
+
+    /// Presses ⌘ with the given key in the app in front.
+    private static func press(_ key: CGKeyCode) {
         let source = CGEventSource(stateID: .combinedSessionState)
-        let keyV: CGKeyCode = 9
         for keyDown in [true, false] {
-            let event = CGEvent(keyboardEventSource: source, virtualKey: keyV, keyDown: keyDown)
+            let event = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: keyDown)
             event?.flags = .maskCommand
             event?.post(tap: .cgAnnotatedSessionEventTap)
         }
     }
+
+    /// For apps that do not share their selection (many browsers and chat apps): presses ⌘C there
+    /// and takes what lands on the clipboard. Nil when nothing was copied.
+    @MainActor
+    static func copySelection() async -> String? {
+        guard isTrusted else { return nil }
+        let pasteboard = NSPasteboard.general
+        let before = pasteboard.changeCount
+        press(8)
+        for _ in 0..<12 {
+            try? await Task.sleep(for: .milliseconds(25))
+            if pasteboard.changeCount != before { break }
+        }
+        guard pasteboard.changeCount != before else { return nil }
+        return Clipboard.takeFresh()
+    }
+}
+
+/// Text that was copied and not yet used by the window.
+@MainActor
+enum Clipboard {
+    /// The clipboard state already seen, so the same copy is never translated twice
+    /// and nothing copied before the app started is picked up.
+    private static var seen = NSPasteboard.general.changeCount
+    /// Password managers mark what they copy with these types. Such text is never taken.
+    private static let secret = ["org.nspasteboard.ConcealedType", "org.nspasteboard.TransientType",
+                                 "com.agilebits.onepassword"].map { NSPasteboard.PasteboardType($0) }
+
+    /// Text copied since the last call, or nil.
+    static func takeFresh() -> String? {
+        let pasteboard = NSPasteboard.general
+        guard pasteboard.changeCount != seen else { return nil }
+        seen = pasteboard.changeCount
+        let types = pasteboard.types ?? []
+        guard !secret.contains(where: types.contains),
+              let text = pasteboard.string(forType: .string),
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return text
+    }
+
+    /// Called after the app itself writes to the clipboard, and at launch.
+    static func markSeen() { seen = NSPasteboard.general.changeCount }
 }

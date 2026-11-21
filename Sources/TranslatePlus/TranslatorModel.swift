@@ -71,6 +71,10 @@ final class TranslatorModel: ObservableObject {
     /// Both off by default: the app is a plain Google translator until an assistant is switched on in Settings.
     @Published var claudeEnabled: Bool { didSet { save(claudeEnabled, "claudeEnabled"); optionsChanged() } }
     @Published var codexEnabled: Bool { didSet { save(codexEnabled, "codexEnabled"); optionsChanged() } }
+    /// When nothing is selected, translate what was copied since the window was last open.
+    @Published var useClipboard: Bool { didSet { save(useClipboard, "useClipboard") } }
+    /// Shown in the window when the shortcut could not read the selection for lack of permission.
+    @Published var needsAccess = false
     /// The Dock icon gives people who do not use the shortcut something to click. On by default.
     @Published var showInDock: Bool { didSet { save(showInDock, "showInDock") } }
     /// Nil until Settings looked for the programs.
@@ -99,6 +103,7 @@ final class TranslatorModel: ObservableObject {
         claudeEnabled = defaults.bool(forKey: "claudeEnabled")
         codexEnabled = defaults.bool(forKey: "codexEnabled")
         showInDock = defaults.object(forKey: "showInDock") as? Bool ?? true
+        useClipboard = defaults.object(forKey: "useClipboard") as? Bool ?? true
         assistant = defaults.string(forKey: "assistant").flatMap(Engine.init) ?? .claude
         if defaults.object(forKey: "shortcutKeyCode") != nil {
             shortcut = Shortcut(keyCode: defaults.integer(forKey: "shortcutKeyCode"),
@@ -246,6 +251,7 @@ final class TranslatorModel: ObservableObject {
         guard !text.isEmpty else { return false }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
+        Clipboard.markSeen()
         note = "Copied"
         return true
     }
@@ -267,6 +273,13 @@ final class TranslatorModel: ObservableObject {
         debounce?.cancel()
         source = oldTarget
         target = newTarget
+    }
+
+    /// Puts text picked up from the front app or the clipboard into the window and runs it.
+    func take(_ text: String) {
+        debounce?.cancel()
+        input = text
+        run()
     }
 
     func swapIntoInput() {

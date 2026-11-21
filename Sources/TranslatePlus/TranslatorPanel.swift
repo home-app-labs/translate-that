@@ -30,18 +30,27 @@ final class TranslatorPanel: NSObject, NSWindowDelegate {
         if Date().timeIntervalSince(hiddenByFocusLoss) < 0.3 { return }
         model.showingSettings = false
         show(below: anchor)
+        takeCopiedText()
     }
 
     /// Shortcut: translate whatever is selected in the front app, or close.
     func toggleFromShortcut() {
         if isVisible { hide(returnFocus: true); return }
-        let selection = FrontApp.selectedText()
-        model.showingSettings = false
-        show(below: nil)
-        if let selection {
-            model.input = selection
-            model.run()
+        Task { @MainActor in
+            // The selection, read directly; else copied with ⌘C; else whatever was copied by hand just before.
+            var text = FrontApp.selectedText()
+            if text == nil { text = await FrontApp.copySelection() }
+            if text == nil, model.useClipboard { text = Clipboard.takeFresh() }
+            model.needsAccess = !FrontApp.isTrusted
+            model.showingSettings = false
+            show(below: nil)
+            if let text { model.take(text) }
         }
+    }
+
+    /// For opening from an icon: translate what was copied since the window was last open.
+    func takeCopiedText() {
+        if model.useClipboard, let text = Clipboard.takeFresh() { model.take(text) }
     }
 
     func show(below anchor: NSRect?) {

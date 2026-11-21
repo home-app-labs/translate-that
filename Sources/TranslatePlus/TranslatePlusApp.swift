@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setUpStatusItem()
         setUpMainMenu()
         TranslatorPanel.shared.trackFrontmostApp()
+        Clipboard.markSeen()
         Debug.runHooks()
     }
 
@@ -35,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             TranslatorModel.shared.showingSettings = false
             panel.show(below: nil)
+            panel.takeCopiedText()
         }
         return false
     }
@@ -181,6 +183,7 @@ enum Debug {
         if let mode = env["TRANSLATEPLUS_DEMO_MODE"].flatMap(Mode.init) { model.mode = mode }
         model.activeEngine = env["TRANSLATEPLUS_DEMO_ENGINE"].flatMap(Engine.init) ?? .google
         model.showingSettings = env["TRANSLATEPLUS_SHOW"] == "settings"
+        model.needsAccess = env["TRANSLATEPLUS_SHOW"] == "access"
         // TRANSLATEPLUS_DEMO_CHOOSE=claude|codex clicks that engine in the window, switched on or not.
         if let choice = env["TRANSLATEPLUS_DEMO_CHOOSE"].flatMap(Engine.init) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { model.choose(choice) }
