@@ -9,6 +9,14 @@ final class EnginesTests: XCTestCase {
         XCTAssertEqual(result.detected, "de")
     }
 
+    func testGoogleCompactResponseWithAndWithoutDetectedLanguage() throws {
+        let detected = try GoogleTranslate.parseCompact(Data(#"[["Good morning","de"]]"#.utf8))
+        XCTAssertEqual(detected, GoogleTranslate.Result(text: "Good morning", detected: "de"))
+        let plain = try GoogleTranslate.parseCompact(Data(#"["Good morning"]"#.utf8))
+        XCTAssertEqual(plain, GoogleTranslate.Result(text: "Good morning", detected: nil))
+        XCTAssertThrowsError(try GoogleTranslate.parseCompact(Data("<html>Sorry...</html>".utf8)))
+    }
+
     func testGoogleResponseThatIsNotTheExpectedShapeThrows() {
         XCTAssertThrowsError(try GoogleTranslate.parse(Data("<html>blocked</html>".utf8)))
         XCTAssertThrowsError(try GoogleTranslate.parse(Data(#"{"error":"x"}"#.utf8)))

@@ -71,6 +71,7 @@ final class TranslatorPanel: NSObject, NSWindowDelegate {
         origin.y = min(max(origin.y, area.minY), area.maxY - Self.size.height)
         panel.setFrame(NSRect(origin: origin, size: Self.size), display: true)
         panel.makeKeyAndOrderFront(nil)
+        if FrontApp.isTrusted { model.needsAccess = false }
         model.focusTick += 1
 
         if keyMonitor == nil {

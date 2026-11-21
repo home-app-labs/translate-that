@@ -174,7 +174,7 @@ final class TranslatorModel: ObservableObject {
         debounce?.cancel()
         guard usesGoogle else { return }
         debounce = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(500))
+            try? await Task.sleep(for: .milliseconds(700))
             if !Task.isCancelled { self?.run() }
         }
     }

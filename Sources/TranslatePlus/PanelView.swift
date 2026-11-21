@@ -152,6 +152,10 @@ struct PanelView: View {
         }
         .padding(10)
         .background(Color.orange.opacity(0.16), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        // Goes away by itself once the permission is given.
+        .onReceive(Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()) { _ in
+            if FrontApp.isTrusted { model.needsAccess = false }
+        }
     }
 
     /// Shown after choosing an engine that is not switched on yet.

@@ -59,6 +59,8 @@ enum Prompts {
 
 // MARK: Google Translate
 
+/// Google Translate through the keyless addresses that Google's own web widgets and browser extension call.
+/// Neither is an official API. When one refuses with "too many requests", the other is tried.
 enum GoogleTranslate {
     struct Result: Equatable {
         var text: String
@@ -66,24 +68,76 @@ enum GoogleTranslate {
         var detected: String?
     }
 
-    enum Failure: LocalizedError {
+    enum Failure: LocalizedError, Equatable {
+        case busy
         case badResponse(Int)
         case unreadable
 
         var errorDescription: String? {
             switch self {
+            case .busy:
+                return "Google Translate is limiting requests from this network for now. Try again in a few minutes."
             case .badResponse(let code): return "Google Translate answered with HTTP \(code)."
             case .unreadable: return "Google Translate sent a response that could not be read."
             }
         }
     }
 
-    /// Uses the keyless endpoint that the Google Translate browser widgets call.
+    enum Endpoint: CaseIterable {
+        case widget, browserExtension
+
+        var url: String {
+            switch self {
+            case .widget: return "https://translate.googleapis.com/translate_a/single"
+            case .browserExtension: return "https://clients5.google.com/translate_a/t"
+            }
+        }
+
+        var client: String { self == .widget ? "gtx" : "dict-chrome-ex" }
+
+        func parse(_ data: Data) throws -> Result {
+            self == .widget ? try GoogleTranslate.parse(data) : try GoogleTranslate.parseCompact(data)
+        }
+    }
+
+    /// The endpoint that refused last, and until when to leave it alone.
+    private static let lock = NSLock()
+    private static var resting: [Endpoint: Date] = [:]
+    private static var answers: [String: Result] = [:]
+
     /// `source` is nil when Google should detect the language.
     static func translate(_ text: String, from source: String? = nil, to target: String) async throws -> Result {
-        var components = URLComponents(string: "https://translate.googleapis.com/translate_a/single")!
+        // The same text in the same direction was just answered: do not ask again.
+        let key = "\(source ?? "auto")>\(target)>\(text)"
+        let now = Date()
+        let (known, order) = lock.withLock {
+            (answers[key], Endpoint.allCases.sorted { (resting[$0] ?? .distantPast) < (resting[$1] ?? .distantPast) })
+        }
+        if let known { return known }
+
+        var failure: Error = Failure.busy
+        for endpoint in order {
+            do {
+                let result = try await ask(endpoint, text, from: source, to: target)
+                lock.withLock {
+                    if answers.count > 200 { answers.removeAll() }
+                    answers[key] = result
+                }
+                return result
+            } catch Failure.busy {
+                lock.withLock { resting[endpoint] = now.addingTimeInterval(600) }
+                failure = Failure.busy
+            } catch let error as Failure {
+                failure = error
+            }
+        }
+        throw failure
+    }
+
+    private static func ask(_ endpoint: Endpoint, _ text: String, from source: String?, to target: String) async throws -> Result {
+        var components = URLComponents(string: endpoint.url)!
         components.queryItems = [
-            URLQueryItem(name: "client", value: "gtx"),
+            URLQueryItem(name: "client", value: endpoint.client),
             URLQueryItem(name: "sl", value: source ?? "auto"),
             URLQueryItem(name: "tl", value: target),
             URLQueryItem(name: "dt", value: "t"),
@@ -97,18 +151,30 @@ enum GoogleTranslate {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-            throw Failure.badResponse(http.statusCode)
+            throw http.statusCode == 429 ? Failure.busy : Failure.badResponse(http.statusCode)
         }
-        return try parse(data)
+        return try endpoint.parse(data)
     }
 
-    /// The response is `[[[translated, original, …], …], null, "detected-language", …]`.
+    /// The widget answers `[[[translated, original, …], …], null, "detected-language", …]`.
     static func parse(_ data: Data) throws -> Result {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [Any],
               let segments = root.first as? [Any] else { throw Failure.unreadable }
         let text = segments.compactMap { ($0 as? [Any])?.first as? String }.joined()
         let detected = root.count > 2 ? root[2] as? String : nil
         return Result(text: text, detected: detected)
+    }
+
+    /// The extension answers `[["translated", "detected-language"]]`, or `["translated"]` when the source was given.
+    static func parseCompact(_ data: Data) throws -> Result {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [Any], let first = root.first else {
+            throw Failure.unreadable
+        }
+        if let text = first as? String { return Result(text: text, detected: nil) }
+        if let pair = first as? [Any], let text = pair.first as? String {
+            return Result(text: text, detected: pair.count > 1 ? pair[1] as? String : nil)
+        }
+        throw Failure.unreadable
     }
 }
 

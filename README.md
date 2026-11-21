@@ -53,7 +53,7 @@ Translation needs a service, so this is the one Home App Labs app that uses the 
 
 | Engine | Where the text is sent |
 | --- | --- |
-| Google | `translate.googleapis.com`, the keyless address used by Google's own web widgets. It is not an official API and may stop answering |
+| Google | `translate.googleapis.com`, the keyless address used by Google's own web widgets, or `clients5.google.com`, the one its browser extension uses, when the first is busy. Neither is an official API and both may stop answering |
 | Claude, only when switched on | Anthropic, through the Claude Code program on your Mac |
 | ChatGPT, only when switched on | OpenAI, through the Codex program on your Mac |
 
