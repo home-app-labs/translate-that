@@ -88,4 +88,17 @@ final class EnginesTests: XCTestCase {
         XCTAssertTrue(CodexCLI.input(system: "RULES", text: "abc").hasPrefix("RULES"))
         XCTAssertTrue(CodexCLI.input(system: "RULES", text: "abc").hasSuffix("<text>\nabc\n</text>"))
     }
+
+    func testPauseIsShortWhenTheTextLooksFinished() {
+        let pasted = Typing.pause(from: "", to: "A whole sentence pasted at once.")
+        let sentence = Typing.pause(from: "Good morning", to: "Good morning.")
+        let word = Typing.pause(from: "Good", to: "Good ")
+        let midWord = Typing.pause(from: "Goo", to: "Good")
+        let deleting = Typing.pause(from: "Good", to: "Goo")
+        XCTAssertLessThan(pasted, sentence)
+        XCTAssertLessThan(sentence, word)
+        XCTAssertLessThan(word, midWord)
+        XCTAssertLessThanOrEqual(midWord, deleting)
+        XCTAssertLessThan(Typing.pause(from: "Good", to: ""), sentence)
+    }
 }

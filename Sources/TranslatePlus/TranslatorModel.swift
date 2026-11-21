@@ -170,11 +170,16 @@ final class TranslatorModel: ObservableObject {
         activeEngine = choices[(index + 1) % choices.count]
     }
 
+    /// The text as it was at the previous change, to tell typing from pasting.
+    private var previousInput = ""
+
     func inputChanged() {
         debounce?.cancel()
+        let pause = Typing.pause(from: previousInput, to: input)
+        previousInput = input
         guard usesGoogle else { return }
         debounce = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(700))
+            try? await Task.sleep(for: .milliseconds(pause))
             if !Task.isCancelled { self?.run() }
         }
     }
@@ -355,5 +360,25 @@ final class TranslatorModel: ObservableObject {
             }
             objectWillChange.send()
         }
+    }
+}
+
+/// Decides how long to wait after a change before asking for a translation: at once when the text
+/// clearly is complete, longer while a word is still being typed. Keeps the app quick without
+/// sending a request for every letter.
+enum Typing {
+    /// Milliseconds to wait after the text changed from `old` to `new`.
+    static func pause(from old: String, to new: String) -> Int {
+        // Pasted, picked up or cleared in one go: nothing more is coming.
+        if abs(new.count - old.count) > 2 || new.isEmpty { return 30 }
+        guard let last = new.last else { return 30 }
+        // Deleting usually comes in a run of key presses.
+        if new.count < old.count { return 700 }
+        // A finished sentence or line.
+        if ".!?。…\n".contains(last) { return 200 }
+        // A finished word.
+        if last == " " || ",;:)".contains(last) { return 350 }
+        // In the middle of a word.
+        return 650
     }
 }
