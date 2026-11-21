@@ -1,0 +1,10 @@
+#!/bin/bash
+# Runs as root at the end of the installer: hand the app to the person who installed it and open it.
+APP="/Applications/Translate That.app"
+USER_NAME="$(/usr/bin/stat -f%Su /dev/console)"
+if [ -n "$USER_NAME" ] && [ "$USER_NAME" != "root" ]; then
+    /usr/sbin/chown -R "$USER_NAME" "$APP" || true
+    /usr/bin/pkill -x TranslatePlus || true
+    /usr/bin/sudo -u "$USER_NAME" /usr/bin/open "$APP" || true
+fi
+exit 0
