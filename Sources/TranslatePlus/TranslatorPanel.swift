@@ -34,7 +34,7 @@ final class TranslatorPanel: NSObject, NSWindowDelegate {
 
     /// Shortcut: translate whatever is selected in the front app, or close.
     func toggleFromShortcut() {
-        if isVisible { hide(); return }
+        if isVisible { hide(returnFocus: true); return }
         let selection = FrontApp.selectedText()
         model.showingSettings = false
         show(below: nil)
@@ -72,11 +72,42 @@ final class TranslatorPanel: NSObject, NSWindowDelegate {
         }
     }
 
-    func hide() {
+    /// Closes the panel. With `returnFocus`, and when Translate That itself is the active app (it was opened
+    /// from the Dock), the app that was in front before comes back, so an inserted result lands there.
+    func hide(returnFocus: Bool = false) {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
         keyMonitor = nil
         model.cancelRecording()
         panel?.orderOut(nil)
+        guard returnFocus, NSApp.isActive else { return }
+        if let previousApp, !previousApp.isTerminated { previousApp.activate() } else { NSApp.hide(nil) }
+    }
+
+    /// The app the user was in before Translate That came to the front.
+    private var previousApp: NSRunningApplication?
+
+    /// Remembers which other app was active last. Needed when the panel is opened from the Dock,
+    /// because that click makes Translate That the active app.
+    func trackFrontmostApp() {
+        let own = ProcessInfo.processInfo.processIdentifier
+        if let app = NSWorkspace.shared.frontmostApplication, app.processIdentifier != own { previousApp = app }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] note in
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.processIdentifier != own else { return }
+            MainActor.assumeIsolated { self?.previousApp = app }
+        }
+    }
+
+    /// Shows or removes the Dock icon without closing the panel the switch sits in.
+    func applyDockSetting() {
+        let wasOpen = isVisible
+        staysOpen = true
+        NSApp.setActivationPolicy(model.showInDock ? .regular : .accessory)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [self] in
+            staysOpen = false
+            if wasOpen { panel?.makeKeyAndOrderFront(nil) }
+        }
     }
 
     private func makePanel() -> NSPanel {
@@ -104,7 +135,7 @@ final class TranslatorPanel: NSObject, NSWindowDelegate {
     // MARK: Actions
 
     func copyAndClose() {
-        if model.copyOutput() { hide() }
+        if model.copyOutput() { hide(returnFocus: true) }
     }
 
     /// Puts the result on the clipboard, closes the panel and pastes into the app underneath.
@@ -115,8 +146,10 @@ final class TranslatorPanel: NSObject, NSWindowDelegate {
             FrontApp.requestTrust()
             return
         }
-        hide()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { FrontApp.sendPaste() }
+        // Opened from the Dock, the other app first has to come back to the front: give it a moment longer.
+        let delay = NSApp.isActive ? 0.35 : 0.12
+        hide(returnFocus: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { FrontApp.sendPaste() }
     }
 
     // MARK: Keys
@@ -140,7 +173,7 @@ final class TranslatorPanel: NSObject, NSWindowDelegate {
             } else if model.isRunning, !model.usesGoogle {
                 model.stop()
             } else {
-                hide()
+                hide(returnFocus: true)
             }
             return true
         }

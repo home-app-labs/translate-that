@@ -10,7 +10,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
-        app.setActivationPolicy(.accessory)
+        // Snapshots for the website and tests must not flash an icon in the Dock.
+        let inDock = TranslatorModel.shared.showInDock && Debug.snapshotDirectory == nil
+        app.setActivationPolicy(inDock ? .regular : .accessory)
         app.run()
     }
 
@@ -19,13 +21,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         TranslatorModel.shared.registerShortcut()
         TranslatorModel.shared.findAssistants()
         setUpStatusItem()
+        setUpMainMenu()
+        TranslatorPanel.shared.trackFrontmostApp()
         Debug.runHooks()
     }
 
-    /// Opening the app again (Spotlight, Finder) shows the panel.
+    /// Clicking the Dock icon, or opening the app again from Spotlight or Finder, shows the translator.
+    /// A second click puts it away and goes back to the app that was in front.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        TranslatorPanel.shared.show(below: anchor)
+        let panel = TranslatorPanel.shared
+        if panel.isVisible {
+            panel.hide(returnFocus: true)
+        } else {
+            TranslatorModel.shared.showingSettings = false
+            panel.show(below: nil)
+        }
         return false
+    }
+
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        let menu = NSMenu()
+        add(menu, "Open Translate That", #selector(openCentered))
+        add(menu, "Settings…", #selector(openSettingsCentered))
+        return menu
+    }
+
+    /// The menu bar shown while Translate That is the active app, which happens after a click on its Dock icon.
+    private func setUpMainMenu() {
+        let main = NSMenu()
+        let appMenu = NSMenu()
+        add(appMenu, "Open Translate That", #selector(openCentered))
+        add(appMenu, "Settings…", #selector(openSettingsCentered)).keyEquivalent = ","
+        appMenu.addItem(.separator())
+        let hide = appMenu.addItem(withTitle: "Hide Translate That", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        hide.target = NSApp
+        let quit = appMenu.addItem(withTitle: "Quit Translate That", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        quit.target = NSApp
+        main.addItem(withTitle: "Translate That", action: nil, keyEquivalent: "").submenu = appMenu
+
+        // Standard editing commands, so the text fields behave like any other.
+        let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        edit.addItem(.separator())
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        main.addItem(withTitle: "Edit", action: nil, keyEquivalent: "").submenu = edit
+        NSApp.mainMenu = main
     }
 
     // MARK: Menu bar
@@ -97,6 +141,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func openSettings() {
         TranslatorModel.shared.showingSettings = true
         TranslatorPanel.shared.show(below: anchor)
+    }
+
+    @objc private func openCentered() {
+        TranslatorModel.shared.showingSettings = false
+        TranslatorPanel.shared.show(below: nil)
+    }
+
+    @objc private func openSettingsCentered() {
+        TranslatorModel.shared.showingSettings = true
+        TranslatorPanel.shared.show(below: nil)
     }
 
     @objc private func requestTrust() { FrontApp.requestTrust() }

@@ -222,6 +222,10 @@ struct SettingsView: View {
                 Divider()
                 switchRow("Launch at login", isOn: Binding(get: { model.launchAtLogin },
                                                            set: { model.launchAtLogin = $0 }))
+                switchRow("Show in Dock", isOn: Binding(get: { model.showInDock }, set: {
+                    model.showInDock = $0
+                    if model.persists { TranslatorPanel.shared.applyDockSetting() }
+                }))
             }
 
             section {

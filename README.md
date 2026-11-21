@@ -9,7 +9,7 @@ Press ⌃⌘T in any app and a small window opens with the text you had selected
 ## What it does
 
 - **One shortcut, any app.** ⌃⌘T opens the window in the middle of the screen, on top of whatever you are doing. Selected text is picked up and translated straight away. You choose the shortcut in Settings.
-- **Lives in the menu bar.** No Dock icon. A click on the menu bar icon opens the same window under the icon.
+- **In the menu bar and in the Dock.** A click on either icon opens the same window. The Dock icon can be switched off in Settings, leaving only the menu bar.
 - **Translates as you type.** Google Translate answers while you write and shows the language it detected.
 - **Any direction.** The source language is detected, or you choose it. One button swaps the two languages and translates the result back.
 - **Edit the result.** The lower field is editable. The arrow button moves the result up to translate it again, for example into a third language.
@@ -42,6 +42,7 @@ The gear in the window, or a right-click on the menu bar icon.
 
 - **Shortcut.** Click the shortcut and press the keys you want. If another app already holds them, the old shortcut stays.
 - **Launch at login.**
+- **Show in Dock.** On at first. Switch it off to keep only the menu bar icon.
 - **AI assistants.** Shows whether Claude Code and Codex were found on this Mac, with a switch for each and the Claude model.
 
 ## Where your text goes

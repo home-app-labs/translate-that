@@ -71,6 +71,8 @@ final class TranslatorModel: ObservableObject {
     /// Both off by default: the app is a plain Google translator until an assistant is switched on in Settings.
     @Published var claudeEnabled: Bool { didSet { save(claudeEnabled, "claudeEnabled"); optionsChanged() } }
     @Published var codexEnabled: Bool { didSet { save(codexEnabled, "codexEnabled"); optionsChanged() } }
+    /// The Dock icon gives people who do not use the shortcut something to click. On by default.
+    @Published var showInDock: Bool { didSet { save(showInDock, "showInDock") } }
     /// Nil until Settings looked for the programs.
     @Published var claudeFound: Bool?
     @Published var codexFound: Bool?
@@ -96,6 +98,7 @@ final class TranslatorModel: ObservableObject {
         claudeModel = defaults.string(forKey: "claudeModel").flatMap(ClaudeCLI.Model.init) ?? .sonnet
         claudeEnabled = defaults.bool(forKey: "claudeEnabled")
         codexEnabled = defaults.bool(forKey: "codexEnabled")
+        showInDock = defaults.object(forKey: "showInDock") as? Bool ?? true
         assistant = defaults.string(forKey: "assistant").flatMap(Engine.init) ?? .claude
         if defaults.object(forKey: "shortcutKeyCode") != nil {
             shortcut = Shortcut(keyCode: defaults.integer(forKey: "shortcutKeyCode"),
