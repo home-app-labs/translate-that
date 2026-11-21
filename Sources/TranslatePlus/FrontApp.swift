@@ -6,10 +6,14 @@ import ApplicationServices
 enum FrontApp {
     static var isTrusted: Bool { AXIsProcessTrusted() }
 
-    /// Shows the system prompt that leads to Privacy & Security > Accessibility.
+    /// Asks for the Accessibility permission. The system's own prompt can take several seconds to appear,
+    /// so the list in System Settings is opened straight away as well; the request puts the app in that list.
     static func requestTrust() {
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
         _ = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     /// The text selected in the focused field or document, read without touching the clipboard.

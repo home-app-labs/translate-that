@@ -141,11 +141,11 @@ struct PanelView: View {
     private var accessNotice: some View {
         HStack(spacing: 8) {
             Image(systemName: "hand.raised").foregroundStyle(.secondary)
-            Text("To pick up the text you selected, Translate That needs the Accessibility permission. Until then, copy the text first (⌘C), then press the shortcut.")
+            Text("To pick up the text you selected, switch on Translate That under Accessibility in System Settings. Until then, copy the text first (⌘C), then press the shortcut.")
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
-            Button("Allow…") { FrontApp.requestTrust() }
+            Button("Open Settings…") { FrontApp.requestTrust() }
             Button { model.needsAccess = false } label: { Image(systemName: "xmark") }
                 .buttonStyle(.borderless)
                 .help("Dismiss")
