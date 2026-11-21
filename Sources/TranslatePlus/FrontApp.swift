@@ -6,13 +6,23 @@ import ApplicationServices
 enum FrontApp {
     static var isTrusted: Bool { AXIsProcessTrusted() }
 
-    /// Asks for the Accessibility permission. The system's own prompt can take several seconds to appear,
-    /// so the list in System Settings is opened straight away as well; the request puts the app in that list.
+    /// Asks for the Accessibility permission, opening one thing only.
+    ///
+    /// The first request from a build makes macOS show its own prompt, which is also what puts the app
+    /// into the Accessibility list; that prompt has a button to System Settings. macOS shows it once,
+    /// so later requests open the list in System Settings directly.
     static func requestTrust() {
+        let defaults = UserDefaults.standard
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        let askedBefore = defaults.string(forKey: "accessAskedBuild") == build
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
         _ = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
+        if askedBefore {
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                NSWorkspace.shared.open(url)
+            }
+        } else {
+            defaults.set(build, forKey: "accessAskedBuild")
         }
     }
 

@@ -145,7 +145,7 @@ struct PanelView: View {
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
-            Button("Open Settings…") { FrontApp.requestTrust() }
+            Button("Allow…") { FrontApp.requestTrust() }
             Button { model.needsAccess = false } label: { Image(systemName: "xmark") }
                 .buttonStyle(.borderless)
                 .help("Dismiss")
